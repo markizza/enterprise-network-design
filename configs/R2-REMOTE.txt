@@ -1,0 +1,155 @@
+R2-REMOTE#show run
+Building configuration...
+
+Current configuration : 3538 bytes
+!
+version 15.1
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+service password-encryption
+!
+hostname R2-REMOTE
+!
+!
+!
+enable secret 5 $1$mERr$GIWQn.IPPp8AfPgmQ19EX1
+!
+!
+!
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+!
+!
+username dfsadmin privilege 15 secret 5 $1$mERr$vMadtDCUmU7d4NanJStqx/
+username dfsops secret 5 $1$mERr$v9h2jY0FSlp8oDtMPja850
+!
+!
+license udi pid CISCO2911/K9 sn FTX1524J4K3-
+license boot module c2900 technology-package securityk9
+!
+!
+!
+crypto isakmp policy 10
+ encr aes 256
+ authentication pre-share
+ group 5
+ lifetime 3600
+!
+crypto isakmp key DFSvpnKey2026 address 10.10.10.1
+!
+!
+!
+crypto ipsec transform-set DFS-TSET esp-aes 256 esp-sha-hmac
+!
+crypto map DFS-VPN-MAP 10 ipsec-isakmp
+ description IPsec tunnel: external server site to HR VLAN 10
+ set peer 10.10.10.1
+ set pfs group5
+ set transform-set DFS-TSET
+ match address VPN-SERVERS-TO-HR
+!
+!
+!
+!
+ip ssh version 2
+no ip domain-lookup
+ip domain-name dfs.com
+!
+!
+spanning-tree mode pvst
+!
+!
+!
+!
+!
+!
+interface GigabitEthernet0/0
+ description External Server Site
+ ip address 192.168.20.1 255.255.255.240
+ ip access-group 110 out
+ duplex auto
+ speed auto
+!
+interface GigabitEthernet0/1
+ ip address 10.10.10.2 255.255.255.252
+ ip ospf message-digest-key 1 md5 Df50spf2026
+ duplex auto
+ speed auto
+ crypto map DFS-VPN-MAP
+!
+interface GigabitEthernet0/2
+ no ip address
+ duplex auto
+ speed auto
+ shutdown
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+router ospf 1
+ router-id 2.2.2.2
+ log-adjacency-changes
+ area 0 authentication message-digest
+ passive-interface GigabitEthernet0/0
+ network 10.10.10.0 0.0.0.3 area 0
+ network 192.168.20.0 0.0.0.15 area 0
+!
+ip classless
+!
+ip flow-export version 9
+!
+!
+ip access-list extended VPN-SERVERS-TO-HR
+ permit ip 192.168.20.0 0.0.0.15 192.168.10.32 0.0.0.15
+access-list 110 remark ### SERVER-ACCESS : outbound on Gi0/0 ###
+access-list 110 remark --- DNS name resolution for all HQ departments ---
+access-list 110 permit udp 192.168.10.0 0.0.0.255 host 192.168.20.2 eq domain
+access-list 110 remark --- DHCP relay from R1 subinterfaces to the DHCP server ---
+access-list 110 permit udp 192.168.10.0 0.0.0.255 host 192.168.20.2 eq bootps
+access-list 110 remark --- Corporate web service ---
+access-list 110 permit tcp 192.168.10.0 0.0.0.255 host 192.168.20.3 eq www
+access-list 110 permit tcp 192.168.10.0 0.0.0.255 host 192.168.20.3 eq 443
+access-list 110 remark --- Email: SMTP submission and POP3 retrieval ---
+access-list 110 permit tcp 192.168.10.0 0.0.0.255 host 192.168.20.4 eq smtp
+access-list 110 permit tcp 192.168.10.0 0.0.0.255 host 192.168.20.4 eq pop3
+access-list 110 remark --- IS: full management access to the server segment ---
+access-list 110 permit ip 192.168.10.64 0.0.0.7 192.168.20.0 0.0.0.15
+access-list 110 remark --- Reachability testing for the service desk ---
+access-list 110 permit icmp 192.168.10.0 0.0.0.255 192.168.20.0 0.0.0.15 echo
+access-list 110 remark --- Implicit deny ip any any terminates this list ---
+!
+banner motd ^C
+***********************************************************
+  DIGITAL FINANCE SERVICES - AUTHORISED ACCESS ONLY
+
+  Access to this system is restricted to authorised users.
+  Unauthorised access may constitute an offence under the
+  Computer Misuse Act 1990. All activity is logged and
+  monitored.
+***********************************************************
+^C
+!
+!
+!
+!
+line con 0
+ exec-timeout 5 0
+ password 7 08054A1B2A490B4542595A
+ logging synchronous
+ login
+!
+line aux 0
+!
+line vty 0 4
+ exec-timeout 5 0
+ login local
+ transport input ssh
+!
+!
+!
+end
