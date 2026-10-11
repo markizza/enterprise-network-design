@@ -1,0 +1,11 @@
+# Assessed submission — never commit
+*.docx
+*.pdf
+
+# Packet Tracer working files
+*.pkt.bak
+*.pka
+
+# OS noise
+.DS_Store
+Thumbs.db
